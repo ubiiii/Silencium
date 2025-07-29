@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('roomDestructed', '⚠️ Room destroyed due to user inactivity.');
       io.in(roomId).socketsLeave(roomId);
       delete roomCountdowns[roomId];
-    }, 60 * 1000);
+    }, 10 * 60 * 1000);
 
     roomCountdowns[roomId] = { startTime, timeout };
     io.to(roomId).emit('start-inactivity-countdown', { startTime });
