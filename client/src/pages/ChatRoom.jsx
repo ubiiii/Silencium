@@ -289,26 +289,29 @@ useEffect(() => {
     <div className="chat-outer">
       <div className="chat-container">
         <div className="chat-header">
-          <h1>🔐 Silencium</h1>
-          <button onClick={handleLeaveRoom}>Leave Chat</button>
+          <h1 style={{ fontFamily: "'Orbitron' " }}>🔐 Silencium</h1>
+          <button onClick={handleLeaveRoom} style={{ fontFamily: "'Orbitron' " }}>Leave Chat</button>
         </div>
 
         <div className="chat-link">
-          <p>Share this link to invite someone:</p>
-          <div className="chat-link-box">
+          <span style={{ fontFamily: "'Orbitron'" }}>Share Link For Invitation:</span> &nbsp;
+          <button
+          style={{ fontFamily: "'Orbitron' " }}
+              onClick={() =>
+                navigator.clipboard.writeText(`${window.location.origin}/chat?room=${roomId}`)
+              }
+            >
+              Copy Link
+            </button>
+          {/* Scrollbar themed for hacker UI 
+         <div className="chat-link-box">
             <input
               type="text"
               readOnly
               value={`${window.location.origin}/chat?room=${roomId}`}
             />
-            <button
-              onClick={() =>
-                navigator.clipboard.writeText(`${window.location.origin}/chat?room=${roomId}`)
-              }
-            >
-              Copy
-            </button>
-          </div>
+            
+          </div>*/}
         </div>
 
         <div className="chat-messages">
@@ -334,7 +337,7 @@ useEffect(() => {
         </div>
 
         {timeLeft !== null && timeLeft > 0 && (
-          <div className="inactivity-warning">
+          <div className="inactivity-warning" style={{ fontFamily: "'Orbitron' " }}>
             ⚠️ Session expires in {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')} due to inactivity
           </div>
         )}
@@ -360,5 +363,6 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    
   );
 }

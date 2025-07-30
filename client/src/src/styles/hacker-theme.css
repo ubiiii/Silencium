@@ -11,12 +11,24 @@ body {
   color: var(--green);
   font-family: var(--mono);
 }
+.chat-border-wrapper {
+  border: 2px solid lime;
+  padding: 5px;
+  margin: 0rem;
+  border-radius: 0.5rem;
+  height: 100vh; /* full viewport height */
+  box-sizing: border-box;
+  background-color: black;
+  overflow: hidden; /* make sure nothing leaks out */
+}
+
 
 input, textarea, button {
   background-color: var(--black);
   color: var(--green);
   font-family: var(--mono);
   border: 1px solid var(--green-border);
+  border-radius: 0.4rem;
 }
 
 input::placeholder {
@@ -104,6 +116,7 @@ button:hover {
   gap: 0.5rem;
   padding: 1rem;
   border-top: 1px solid #00ff00;
+  border-radius: 0.5rem;
 }
 
 .chat-input input {
@@ -112,6 +125,7 @@ button:hover {
   background: #000;
   color: #00ff00;
   border: 1px solid #00ff00;
+  border-radius: 0.5rem;
 }
 
 .chat-input button {
@@ -119,6 +133,7 @@ button:hover {
   background: transparent;
   border: 1px solid #00ff00;
   color: #00ff00;
+  border-radius: 0.5rem;
 }
 
 .message-row {
@@ -227,8 +242,11 @@ button:hover {
 html, body {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  overflow: hidden; /* 🚫 disables page scrollbar */
+  height: 100%;
+  background-color: black;
 }
+
 
 .chat-outer {
   width: 100%;
@@ -291,4 +309,28 @@ html, body {
 @keyframes blink {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
+}
+
+/* WebKit scrollbars (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000; /* black track */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0f0; /* green thumb */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0c0; /* brighter green on hover */
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #0f0 #000; /* thumb track */
 }
