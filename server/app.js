@@ -8,11 +8,10 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  maxHttpBufferSize: 7 * 1024 * 1024  //  ~7 MB to safely support base64 of 5MB
 });
+
 
 app.use(cors());
 app.get('/', (req, res) => res.send('Silencium server running'));
@@ -55,8 +54,38 @@ io.on('connection', (socket) => {
     }, 100);
   });
 
+  // 🖼️ IMAGE MESSAGE HANDLER (moved outside join-room)
+  socket.on('image-message', (data) => {
+      const roomId = data.roomId || socket.data.roomId;
+      if (!data.image?.startsWith('data:image/') || Buffer.byteLength(data.image, 'utf-8') > 7 * 1024 * 1024) {
+        console.warn(`❌ Blocked oversized or invalid image from ${socket.id}`);
+        return;
+      }
+
+      if (!roomId || !data.image) return;
+
+      const timestamp = new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const messagePayload = {
+        image: data.image,
+        name: data.name,
+        type: data.type,
+        sender: socket.id,
+        timestamp
+      };
+
+      // send to everyone (sender + receiver)
+      io.to(roomId).emit('receive-image', messagePayload);
+    });
+
+
+
   // 🔐 PUBLIC KEY RELAY
   socket.on('send-public-key', ({ roomId, publicKey }) => {
+    if (!roomId || !publicKey) return;
     socket.to(roomId).emit('receive-public-key', {
       publicKey,
       theirSocketId: socket.id
@@ -82,7 +111,7 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('roomDestructed', '⚠️ Room destroyed due to user inactivity.');
       io.in(roomId).socketsLeave(roomId);
       delete roomCountdowns[roomId];
-    }, 10 * 60 * 1000);
+    }, 10 * 60 * 1000); // 10 minutes
 
     roomCountdowns[roomId] = { startTime, timeout };
     io.to(roomId).emit('start-inactivity-countdown', { startTime });
@@ -100,22 +129,30 @@ io.on('connection', (socket) => {
   });
 
   // ❌ DISCONNECT
-  socket.on('disconnect', () => {
-    const roomId = roomManager.leaveRoom(socket.id);
-    if (roomId) {
-      const msg = `❌ ${socket.id} left the room`;
-      io.to(roomId).emit('system-message', msg);
+  socket.on('disconnect', (reason) => {
+  console.log(`🔴 ${socket.id} disconnected due to: ${reason}`);
 
-      const users = roomManager.getUsers(roomId);
-      if (!users.length) {
-        console.log(`💣 No users left in room ${roomId}`);
-      } else {
-        io.to(roomId).emit('user-left', socket.id);
+  const roomId = roomManager.leaveRoom(socket.id);
+  if (roomId) {
+    const msg = `❌ ${socket.id} left the room`;
+    io.to(roomId).emit('system-message', msg);
+
+    const users = roomManager.getUsers(roomId);
+    io.to(roomId).emit('room-update', users);
+
+    if (users.length === 0) {
+      console.log(`💣 No users left in room ${roomId}`);
+      if (roomCountdowns[roomId]) {
+        clearTimeout(roomCountdowns[roomId].timeout);
+        delete roomCountdowns[roomId];
       }
-
-      console.log(`🔴 ${socket.id} left room ${roomId}`);
+    } else {
+      io.to(roomId).emit('user-left', socket.id);
     }
-  });
+
+    console.log(`🔴 ${socket.id} left room ${roomId}`);
+  }
+});
 });
 
 const PORT = process.env.PORT || 3001;
