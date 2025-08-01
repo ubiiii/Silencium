@@ -1,11 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import obfuscatorPlugin from 'vite-plugin-obfuscator';
-
 
 // Production-only configuration with essential security features
 export default defineConfig({
-  plugins: [react(), obfuscatorPlugin()],
+  plugins: [react()],
   worker: {
     format: 'es'
   },

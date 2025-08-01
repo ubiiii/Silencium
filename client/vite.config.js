@@ -1,41 +1,62 @@
-// client/vite.config.js
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import obfuscator from 'rollup-plugin-obfuscator';
 
-// https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  const isProduction = mode === 'production'
-  
+  const isProduction = mode === 'production';
+
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      isProduction && obfuscator({
+        // Obfuscator options
+        compact: true,
+        controlFlowFlattening: false,
+        deadCodeInjection: false,
+        debugProtection: false,
+        debugProtectionInterval: 0,
+        disableConsoleOutput: true,
+        identifierNamesGenerator: 'hexadecimal',
+        log: false,
+        numbersToExpressions: false,
+        renameGlobals: false,
+        selfDefending: false,
+        simplify: true,
+        splitStrings: false,
+        stringArray: true,
+        stringArrayEncoding: [],
+        stringArrayThreshold: 0.75,
+        transformObjectKeys: false,
+        unicodeEscapeSequence: false
+      })
+    ].filter(Boolean),
     worker: {
-      format: 'es' // Allow ES module workers with `import`
+      format: 'es'
     },
     build: {
       minify: isProduction ? 'terser' : false,
-      sourcemap: !isProduction, // Disable source maps in production for security
+      sourcemap: !isProduction,
       terserOptions: isProduction ? {
         compress: {
-          drop_console: true, // Remove console.log in production
-          drop_debugger: true, // Remove debugger statements
+          drop_console: true,
+          drop_debugger: true,
           pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
         },
         mangle: {
           safari10: true
         },
         format: {
-          comments: false // Remove all comments
+          comments: false
         }
       } : {},
       rollupOptions: {
         output: {
           manualChunks: undefined,
-          // Obfuscate chunk names in production
           entryFileNames: isProduction ? '[name].[hash].js' : '[name].js',
           chunkFileNames: isProduction ? '[name].[hash].js' : '[name].js',
           assetFileNames: isProduction ? '[name].[hash].[ext]' : '[name].[ext]'
         }
       }
     }
-  }
-})
+  };
+});
