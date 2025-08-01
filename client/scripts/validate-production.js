@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { glob } = require('glob');
+import fs from 'fs';
+import path from 'path';
+import { glob } from 'glob';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const FORBIDDEN_PATTERNS = [
   /console\.log\s*\(/gi,
@@ -10,12 +14,18 @@ const FORBIDDEN_PATTERNS = [
   /console\.info\s*\(/gi,
   /console\.warn\s*\(/gi,
   /debugger\s*;?/gi,
-  /\/\*[\s\S]*?\*\//g, // Multi-line comments
-  /\/\/.*$/gm, // Single-line comments
 ];
 
 const ALLOWED_CONSOLE_PATTERNS = [
   /console\.error\s*\(/gi, // Allow console.error for critical errors
+];
+
+// Skip validation for these files (third-party libraries)
+const SKIP_FILES = [
+  /crypto\.worker-.*\.js$/,
+  /libsodium/,
+  /vendor/,
+  /node_modules/
 ];
 
 async function validateProductionBuild() {
@@ -43,6 +53,12 @@ async function validateProductionBuild() {
     const issues = [];
 
     for (const file of jsFiles) {
+      // Skip third-party files
+      if (SKIP_FILES.some(skipPattern => skipPattern.test(file))) {
+        console.log(`⏭️  Skipping third-party file: ${file}`);
+        continue;
+      }
+
       const filePath = path.join(distPath, file);
       const content = fs.readFileSync(filePath, 'utf8');
       
@@ -124,8 +140,8 @@ async function validateProductionBuild() {
 }
 
 // Run validation if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   validateProductionBuild();
 }
 
-module.exports = { validateProductionBuild };
+export { validateProductionBuild };

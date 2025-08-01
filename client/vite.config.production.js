@@ -1,36 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { obfuscator } from 'vite-plugin-obfuscator'
 
-// Production-only configuration with full security features
+// Production-only configuration with essential security features
 export default defineConfig({
-  plugins: [
-    react(),
-    obfuscator({
-      options: {
-        compact: true,
-        controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.75,
-        deadCodeInjection: true,
-        deadCodeInjectionThreshold: 0.4,
-        debugProtection: true,
-        debugProtectionInterval: 2000,
-        disableConsoleOutput: true,
-        identifierNamesGenerator: 'hexadecimal',
-        log: false,
-        renameGlobals: false,
-        rotateStringArray: true,
-        selfDefending: true,
-        shuffleStringArray: true,
-        splitStrings: true,
-        splitStringsChunkLength: 10,
-        stringArray: true,
-        stringArrayThreshold: 0.75,
-        transformObjectKeys: true,
-        unicodeEscapeSequence: false
-      }
-    })
-  ],
+  plugins: [react()],
   worker: {
     format: 'es'
   },
@@ -41,18 +14,28 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        passes: 3, // Multiple passes for better compression
+        unsafe: true,
+        unsafe_comps: true,
+        unsafe_math: true,
+        unsafe_proto: true
       },
       mangle: {
-        safari10: true
+        safari10: true,
+        properties: {
+          regex: /^_/
+        }
       },
       format: {
-        comments: false
+        comments: false,
+        beautify: false
       }
     },
     rollupOptions: {
       output: {
         manualChunks: undefined,
+        // Randomized file names for security
         entryFileNames: '[name].[hash].js',
         chunkFileNames: '[name].[hash].js',
         assetFileNames: '[name].[hash].[ext]'
