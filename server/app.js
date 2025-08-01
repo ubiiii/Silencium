@@ -4,6 +4,15 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const roomManager = require('./rooms/roomManager');
 const rateLimiter = require('./rateLimiter');
+const { isValidRoomId, generateSecureRoomId } = require('./utils/secureId');
+const { 
+  apiLimiter, 
+  roomCreationLimiter, 
+  securityHeaders, 
+  productionSecurity, 
+  validateRequest, 
+  errorHandler 
+} = require('./middleware/security');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,8 +23,38 @@ const io = new Server(server, {
 });
 
 
+// Security middleware
+if (process.env.NODE_ENV === 'production') {
+  app.use(productionSecurity);
+  app.use(securityHeaders);
+}
+
 app.use(cors());
+app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
+app.use(validateRequest);
+app.use(apiLimiter);
+
 app.get('/', (req, res) => res.send('Silencium server running'));
+
+// 🔐 CREATE SECURE ROOM ENDPOINT
+app.post('/create-room', roomCreationLimiter, (req, res) => {
+  try {
+    const roomId = generateSecureRoomId();
+    console.log(`🏠 Generated secure room ID: ${roomId}`);
+    
+    res.json({ 
+      success: true, 
+      roomId,
+      message: 'Secure room created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating room:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to create room' 
+    });
+  }
+});
 
 const roomCountdowns = {}; // roomId => { startTime, timeout }
 
@@ -25,7 +64,13 @@ io.on('connection', (socket) => {
   // 🏠 JOIN ROOM
   socket.on('join-room', ({ roomId }) => {
     if (!roomId || typeof roomId !== 'string') {
-      socket.emit('join-error', 'Invalid room ID');
+      socket.emit('join-error', 'Invalid room ID format');
+      return;
+    }
+
+    // Validate secure room ID format
+    if (!isValidRoomId(roomId)) {
+      socket.emit('join-error', 'Invalid room ID. Room IDs must be 32 alphanumeric characters.');
       return;
     }
 
@@ -66,6 +111,19 @@ io.on('connection', (socket) => {
       }
 
       if (!roomId || !data.image) return;
+
+      // Server-side rate limiting for images
+      const rateCheck = rateLimiter.checkImageRate(socket.id);
+      if (!rateCheck.allowed) {
+        console.log(`🚫 Rate limit blocked image from ${socket.id}: ${rateCheck.reason}`);
+        socket.emit('rate-limit-exceeded', {
+          type: 'image',
+          reason: rateCheck.reason,
+          remainingTime: rateCheck.remainingTime,
+          violations: rateCheck.violations
+        });
+        return;
+      }
 
       const timestamp = new Date().toLocaleTimeString([], {
         hour: '2-digit',
@@ -194,6 +252,9 @@ io.on('connection', (socket) => {
   socket.on('disconnect', (reason) => {
   console.log(`🔴 ${socket.id} disconnected due to: ${reason}`);
 
+  // Clean up rate limiter
+  rateLimiter.removeClient(socket.id);
+
   const roomId = roomManager.leaveRoom(socket.id);
   if (roomId) {
     const msg = `❌ ${socket.id} left the room`;
@@ -217,7 +278,18 @@ io.on('connection', (socket) => {
 });
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Silencium server running at http://localhost:${PORT}`);
+  
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🔒 Production security features enabled:');
+    console.log('   • Rate limiting active');
+    console.log('   • Security headers set');
+    console.log('   • Request validation enabled');
+    console.log('   • Error details hidden');
+  }
 });
