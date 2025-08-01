@@ -7,7 +7,7 @@ import {
   getMyKeyPair
 } from '../crypto/libs';
 import { CryptoWorker } from '../crypto/workerWrapper';
-import CanvasImageRenderer from '../components/CanvasImageRenderer';
+import Message from '../components/Message';
 import '../src/styles/hacker-theme.css';
 import '../utils/animations';
 import useAutoScroll from '../src/hooks/useAutoScroll';
@@ -369,28 +369,7 @@ export default function ChatRoom() {
 
         <div className="chat-messages">
           {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`message-row ${
-                msg.sender === mySocketId
-                  ? 'align-right'
-                  : msg.sender && msg.sender !== 'system'
-                  ? 'align-left'
-                  : 'align-center'
-              }`}
-            >
-              <div className={`message-bubble ${msg.sender === 'system' ? 'system-msg' : 'user-msg'}`}>
-                {msg.type?.startsWith('image') ? (
-                        <CanvasImageRenderer imageData={msg.image} />
-                      ) : (
-                        <div>{msg.text ?? '[no text]'}</div>
-                      )}
-
-                      {msg.timestamp && (msg.text || msg.image) && (
-                        <div className="timestamp">{msg.timestamp}</div>
-                      )}
-              </div>
-            </div>
+            <Message key={msg.id} msg={msg} mySocketId={mySocketId} />
           ))}
           <div ref={messagesEndRef} />
         </div>
