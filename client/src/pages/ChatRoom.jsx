@@ -8,6 +8,7 @@ import {
 } from '../crypto/libs';
 import { CryptoWorker } from '../crypto/workerWrapper';
 import Message from '../components/Message';
+import { rateLimiter } from '../utils/rateLimiter';
 import '../src/styles/hacker-theme.css';
 import '../utils/animations';
 import useAutoScroll from '../src/hooks/useAutoScroll';
@@ -31,6 +32,7 @@ export default function ChatRoom() {
   const [myPublicKey, setMyPublicKey] = useState(null);
   const [hasSharedKey, setHasSharedKey] = useState(false);
   const [encryptionStatus, setEncryptionStatus] = useState('initializing');
+  const [rateLimitWarning, setRateLimitWarning] = useState('');
   const messagesEndRef = useRef(null);
 
   const location = useLocation();
@@ -61,6 +63,13 @@ export default function ChatRoom() {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Rate limiting check for images
+    if (!rateLimiter.canUploadImage()) {
+      // Reset file input to allow trying again later
+      e.target.value = '';
+      return;
+    }
 
     const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
@@ -103,8 +112,17 @@ export default function ChatRoom() {
       const keyPair = await generateKeyPair();
       setMyPublicKey(keyPair.publicKey);
     });
+
+    // Initialize rate limiter with warning callback
+    rateLimiter.setWarningCallback((message) => {
+      setRateLimitWarning(message);
+      // Clear warning after 3 seconds
+      setTimeout(() => setRateLimitWarning(''), 3000);
+    });
+
     return () => {
       cryptoWorkerRef.current?.terminate();
+      rateLimiter.reset();
     };
   }, []);
 
@@ -139,6 +157,11 @@ export default function ChatRoom() {
   const sendMessage = async () => {
     if (!input.trim()) return;
     if (!hasSharedKeyRef.current || !cryptoWorkerRef.current) return;
+
+    // Rate limiting check
+    if (!rateLimiter.canSendMessage()) {
+      return;
+    }
 
     const { ciphertext, nonce } = await cryptoWorkerRef.current.encrypt(
       new TextEncoder().encode(input),
@@ -588,6 +611,22 @@ export default function ChatRoom() {
         {timeLeft === 0 && (
           <div className="expired-warning">
             🔒 Session expired due to inactivity
+          </div>
+        )}
+
+        {rateLimitWarning && (
+          <div className="rate-limit-warning" style={{ 
+            color: '#ff6b6b', 
+            backgroundColor: '#2a0a0a', 
+            padding: '8px 12px', 
+            margin: '5px 0', 
+            borderRadius: '4px', 
+            border: '1px solid #ff6b6b',
+            fontFamily: "'Orbitron', monospace",
+            fontSize: '0.9em',
+            textAlign: 'center'
+          }}>
+            ⚠️ {rateLimitWarning}
           </div>
         )}
 

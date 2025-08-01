@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const roomManager = require('./rooms/roomManager');
+const rateLimiter = require('./rateLimiter');
 
 const app = express();
 const server = http.createServer(app);
@@ -97,6 +98,20 @@ io.on('connection', (socket) => {
   // 🔐 MESSAGE RELAY
   socket.on('send-message', ({ roomId, encrypted, nonce }) => {
     if (!roomId || !encrypted || !nonce) return;
+    
+    // Server-side rate limiting
+    const rateCheck = rateLimiter.checkMessageRate(socket.id);
+    if (!rateCheck.allowed) {
+      console.log(`🚫 Rate limit blocked message from ${socket.id}: ${rateCheck.reason}`);
+      socket.emit('rate-limit-exceeded', {
+        type: 'message',
+        reason: rateCheck.reason,
+        remainingTime: rateCheck.remainingTime,
+        violations: rateCheck.violations
+      });
+      return;
+    }
+    
     socket.to(roomId).emit('receive-message', { encrypted, nonce });
   });
 
