@@ -246,6 +246,26 @@ export default function ChatRoom() {
         setTimeLeft(null);
       });
 
+      // Handle server-side rate limiting
+      socket.on("rate-limit-exceeded", ({ type, reason, remainingTime, violations }) => {
+        let message = `Rate limit exceeded for ${type}. `;
+        
+        if (reason === 'temporarily_banned') {
+          const banMinutes = Math.ceil(remainingTime / 60000);
+          message += `You are temporarily banned for ${banMinutes} minute${banMinutes > 1 ? 's' : ''}.`;
+        } else {
+          const waitSeconds = Math.ceil(remainingTime / 1000);
+          message += `Please wait ${waitSeconds} second${waitSeconds > 1 ? 's' : ''}.`;
+        }
+        
+        if (violations >= 3) {
+          message += ' Multiple violations detected.';
+        }
+        
+        setRateLimitWarning(message);
+        setTimeout(() => setRateLimitWarning(''), 5000);
+      });
+
       socket.on("receive-public-key", async ({ publicKey, theirSocketId }) => {
         if (receivedKey.current === theirSocketId) return;
         receivedKey.current = theirSocketId;
@@ -374,6 +394,7 @@ export default function ChatRoom() {
        socket.off("roomDestructed");
        socket.off("start-inactivity-countdown");
        socket.off("cancel-inactivity-countdown");
+       socket.off("rate-limit-exceeded");
 
       if (socket.connected) socket.disconnect();
       joinedRef.current = false;

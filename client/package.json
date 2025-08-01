@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:secure": "vite build --mode production && node scripts/validate-production.js",
+    "build:production": "vite build --config vite.config.production.js",
+    "build:secure": "vite build --config vite.config.production.js && node scripts/validate-production.js",
     "validate": "node scripts/validate-production.js",
     "lint": "eslint .",
     "preview": "vite preview"
