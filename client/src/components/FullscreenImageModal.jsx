@@ -7,6 +7,7 @@ const FullscreenImageModal = ({ isOpen, imageData, onClose }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageRef = useRef(null);
+  const containerRef = useRef(null);
 
   // Reset zoom and position when modal opens
   useEffect(() => {
@@ -55,6 +56,17 @@ const FullscreenImageModal = ({ isOpen, imageData, onClose }) => {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setScale(prev => Math.max(0.5, Math.min(5, prev * delta)));
   }, []);
+
+  // Add non-passive wheel event listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container && isOpen) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        container.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [isOpen, handleWheel]);
 
   // Drag handlers
   const handleMouseDown = useCallback((e) => {
@@ -140,8 +152,8 @@ const FullscreenImageModal = ({ isOpen, imageData, onClose }) => {
 
         {/* Image container */}
         <div 
+          ref={containerRef}
           className="image-container"
-          onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
