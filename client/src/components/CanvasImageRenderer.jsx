@@ -1,6 +1,6 @@
 import { useEffect, useRef, memo } from 'react';
 
-const CanvasImageRenderer = memo(({ imageData }) => {
+const CanvasImageRenderer = memo(({ imageData, onClick }) => {
   // Remove or comment out the console.log to eliminate spam
   // console.log('Rendering image of length:', imageData?.length);
   const canvasRef = useRef(null);
@@ -19,15 +19,24 @@ const CanvasImageRenderer = memo(({ imageData }) => {
     img.src = imageData;
   }, [imageData]);
 
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <canvas
       ref={canvasRef}
       style={{
         maxWidth: '100%',
         userSelect: 'none',
-        pointerEvents: 'none'
+        pointerEvents: onClick ? 'auto' : 'none',
+        cursor: onClick ? 'pointer' : 'default'
       }}
       onContextMenu={(e) => e.preventDefault()}
+      onClick={handleClick}
     />
   );
 });
