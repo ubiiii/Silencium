@@ -37,6 +37,7 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
     socket.data.roomId = roomId;
+    socket.data.isCreator = result.users.length === 1; // First user is creator
 
     console.log(`🧑 ${socket.id} joined room ${roomId}`);
     console.log(`👥 Users in room ${roomId}:`, result.users);
@@ -48,6 +49,7 @@ io.on('connection', (socket) => {
     setTimeout(() => {
       io.to(roomId).emit('system-message', msg);
       io.to(roomId).emit('room-update', result.users);
+      io.to(roomId).emit('creator-update', result.users[0]); // Send creator info
       if (result.users.length === 2) {
         io.to(roomId).emit('start-chat');
       }
@@ -96,6 +98,51 @@ io.on('connection', (socket) => {
   socket.on('send-message', ({ roomId, encrypted, nonce }) => {
     if (!roomId || !encrypted || !nonce) return;
     socket.to(roomId).emit('receive-message', { encrypted, nonce });
+  });
+
+  // 🚨 SCREENSHOT DETECTION
+  socket.on('screenshot-detected', ({ roomId, method, detectedBy, targetUser }) => {
+    if (!roomId) return;
+    
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const messagePayload = {
+      id: require('crypto').randomUUID(),
+      text: `🚨 Screenshot attempt detected by ${detectedBy} (${method})`,
+      sender: 'system',
+      timestamp
+    };
+
+    // Broadcast to ALL users in the room (including the sender)
+    io.to(roomId).emit('system-message', messagePayload);
+    
+    console.log(`🚨 Screenshot detected in room ${roomId} by ${detectedBy} using method: ${method}`);
+  });
+
+  // 🔒 SCREENSHOT PROTECTION TOGGLE
+  socket.on('toggle-screenshot-protection', ({ roomId, enabled }) => {
+    if (!roomId || !socket.data.isCreator) return; // Only creator can toggle
+    
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const messagePayload = {
+      id: require('crypto').randomUUID(),
+      text: `🔒 Screenshot protection ${enabled ? 'enabled' : 'disabled'} by room creator`,
+      sender: 'system',
+      timestamp
+    };
+
+    // Broadcast protection status to all users
+    io.to(roomId).emit('screenshot-protection-update', { enabled });
+    io.to(roomId).emit('system-message', messagePayload);
+    
+    console.log(`🔒 Screenshot protection ${enabled ? 'enabled' : 'disabled'} in room ${roomId} by ${socket.id}`);
   });
 
   // ⏳ START INACTIVITY COUNTDOWN

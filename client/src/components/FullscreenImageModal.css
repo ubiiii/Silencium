@@ -12,6 +12,15 @@
   animation: fadeIn 0.2s ease-out;
 }
 
+/* Black screen for screenshot protection */
+.fullscreen-modal-overlay.black-screen {
+  background-color: #000 !important;
+}
+
+.fullscreen-modal-overlay.black-screen .fullscreen-modal-content {
+  opacity: 0;
+}
+
 .fullscreen-modal-content {
   position: relative;
   width: 100%;
@@ -116,6 +125,7 @@
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
+  pointer-events: none;
 }
 
 .instructions {
@@ -151,6 +161,35 @@
   to {
     opacity: 1;
   }
+}
+
+/* Screenshot protection styles */
+.screenshot-protection {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.screenshot-protection * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Prevent drag and drop */
+.screenshot-protection img,
+.screenshot-protection canvas {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
 }
 
 /* Mobile responsive styles */

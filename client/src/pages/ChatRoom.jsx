@@ -22,6 +22,9 @@ export default function ChatRoom() {
   const sharedKeyRef = useRef(null);
   const hasSharedKeyRef = useRef(false);
   const [mySocketId, setMySocketId] = useState('');
+  const [isChatVisible, setIsChatVisible] = useState(true);
+  const [isCreator, setIsCreator] = useState(false);
+  const [screenshotProtectionEnabled, setScreenshotProtectionEnabled] = useState(true);
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -280,42 +283,53 @@ export default function ChatRoom() {
         ]);
       });
 
-      socket.on("system-message", (msg) => {
-        const time = new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        setMessages((prev) => {
-          const alreadyExists = prev.some(
-            (m) => m.text === msg && m.sender === "system"
-          );
-          if (alreadyExists) return prev;
-          return [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              text: msg,
-              sender: "system",
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-              })
+             socket.on("system-message", (msg) => {
+         const time = new Date().toLocaleTimeString([], {
+           hour: "2-digit",
+           minute: "2-digit",
+         });
+         setMessages((prev) => {
+           // Handle both string and object messages
+           const messageText = typeof msg === 'string' ? msg : msg.text;
+           const alreadyExists = prev.some(
+             (m) => m.text === messageText && m.sender === "system"
+           );
+           if (alreadyExists) return prev;
+           return [
+             ...prev,
+             {
+               id: crypto.randomUUID(),
+               text: messageText,
+               sender: "system",
+               timestamp: new Date().toLocaleTimeString([], {
+                 hour: '2-digit',
+                 minute: '2-digit'
+               })
 
-            },
-          ];
-        });
-      });
+             },
+           ];
+         });
+       });
 
       socket.on("join-error", (msg) => {
         alert(`❌ ${msg}`);
         navigate("/");
       });
 
-      socket.on("user-left", () => {
-        setMessages([]);
-        alert("👋 The other user has left the room.");
-        navigate("/");
-      });
+             socket.on("user-left", () => {
+         setMessages([]);
+         alert("👋 The other user has left the room.");
+         navigate("/");
+       });
+
+       socket.on("creator-update", (creatorId) => {
+         setIsCreator(socket.id === creatorId);
+       });
+
+               socket.on("screenshot-protection-update", ({ enabled }) => {
+          console.log('🔄 Received protection update from server:', enabled);
+          setScreenshotProtectionEnabled(enabled);
+        });
     };
 
     setup();
@@ -327,14 +341,16 @@ export default function ChatRoom() {
         window.removeEventListener(event, handleActivity)
       );
 
-      socket.off("receive-message");
-      socket.off("receive-public-key");
-      socket.off("system-message");
-      socket.off("join-error");
-      socket.off("user-left");
-      socket.off("roomDestructed");
-      socket.off("start-inactivity-countdown");
-      socket.off("cancel-inactivity-countdown");
+             socket.off("receive-message");
+       socket.off("receive-public-key");
+       socket.off("system-message");
+       socket.off("join-error");
+       socket.off("user-left");
+       socket.off("creator-update");
+       socket.off("screenshot-protection-update");
+       socket.off("roomDestructed");
+       socket.off("start-inactivity-countdown");
+       socket.off("cancel-inactivity-countdown");
 
       if (socket.connected) socket.disconnect();
       joinedRef.current = false;
@@ -347,9 +363,164 @@ export default function ChatRoom() {
     navigate('/');
   };
 
+  // Screenshot detection handler
+  const handleScreenshotDetected = (method, senderId) => {
+    // Only send notification if protection is enabled
+    if (!screenshotProtectionEnabled) return;
+    
+    // Send screenshot notification to server
+    socket.emit('screenshot-detected', {
+      roomId,
+      method,
+      detectedBy: socket.id,
+      targetUser: senderId || 'unknown'
+    });
+    // Note: Server will broadcast the system message to all users
+  };
+
+  // Toggle screenshot protection (creator only)
+  const toggleScreenshotProtection = () => {
+    if (!isCreator) return;
+    
+    const newState = !screenshotProtectionEnabled;
+    socket.emit('toggle-screenshot-protection', {
+      roomId,
+      enabled: newState
+    });
+  };
+
+  // Global screenshot protection for the entire chat
+  useEffect(() => {
+    if (!roomId) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (screenshotProtectionEnabled) {
+          setIsChatVisible(false);
+          // Notify server about potential screenshot
+          socket.emit('screenshot-detected', {
+            roomId,
+            method: 'visibility_change',
+            detectedBy: socket.id,
+            targetUser: 'chat_interface'
+          });
+        }
+      } else {
+        // Small delay to prevent flickering
+        setTimeout(() => setIsChatVisible(true), 100);
+      }
+    };
+
+    const handleBlur = () => {
+      if (screenshotProtectionEnabled) {
+        setIsChatVisible(false);
+        socket.emit('screenshot-detected', {
+          roomId,
+          method: 'window_blur',
+          detectedBy: socket.id,
+          targetUser: 'chat_interface'
+        });
+      }
+    };
+
+    const handleFocus = () => {
+      setTimeout(() => setIsChatVisible(true), 100);
+    };
+
+    const handleKeyDown = (e) => {
+      // Detect common screenshot shortcuts
+      const isScreenshotShortcut = (
+        (e.ctrlKey && e.shiftKey && e.key === '3') || // macOS Cmd+Shift+3
+        (e.ctrlKey && e.shiftKey && e.key === '4') || // macOS Cmd+Shift+4
+        (e.ctrlKey && e.key === 'PrintScreen') || // Windows Ctrl+PrintScreen
+        (e.key === 'PrintScreen') || // PrintScreen key
+        (e.ctrlKey && e.key === 's' && e.altKey) // Windows Alt+Ctrl+S
+      );
+
+      if (isScreenshotShortcut && screenshotProtectionEnabled) {
+        e.preventDefault();
+        socket.emit('screenshot-detected', {
+          roomId,
+          method: 'keyboard_shortcut',
+          detectedBy: socket.id,
+          targetUser: 'chat_interface'
+        });
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      if (screenshotProtectionEnabled) {
+        e.preventDefault();
+        socket.emit('screenshot-detected', {
+          roomId,
+          method: 'context_menu',
+          detectedBy: socket.id,
+          targetUser: 'chat_interface'
+        });
+      }
+    };
+
+    // Add global event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    // Add CSS protection
+    const style = document.createElement('style');
+    style.textContent = `
+      .chat-outer {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+      
+      .chat-outer * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+      
+      .chat-outer input,
+      .chat-outer textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+             return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.head.removeChild(style);
+    };
+       }, [roomId, socket, screenshotProtectionEnabled]);
+
   return (
-    <div className="chat-outer">
-      <div className="chat-container">
+    <div 
+      className="chat-outer"
+      style={{
+        backgroundColor: !isChatVisible ? '#000' : 'transparent',
+        transition: 'background-color 0.2s ease'
+      }}
+    >
+      <div 
+        className="chat-container"
+        style={{
+          opacity: !isChatVisible ? 0 : 1,
+          transition: 'opacity 0.2s ease'
+        }}
+      >
         <div className="chat-header">
           <h1 style={{ fontFamily: "'Orbitron' " }}>🔐 Silencium</h1>
           <button onClick={handleLeaveRoom} style={{ fontFamily: "'Orbitron' " }}>Leave Chat</button>
@@ -365,12 +536,46 @@ export default function ChatRoom() {
           >
             Copy Link
           </button>
+          {/* Debug info */}
+          <span style={{ 
+            fontFamily: "'Orbitron'", 
+            fontSize: '12px', 
+            color: '#666', 
+            marginLeft: '10px' 
+          }}>
+            Creator: {isCreator ? 'Yes' : 'No'} | Protection: {screenshotProtectionEnabled ? 'ON' : 'OFF'}
+          </span>
+          {/* Only show button to room creator */}
+          {isCreator && (
+            <button
+              style={{ 
+                fontFamily: "'Orbitron' ",
+                marginLeft: '10px',
+                backgroundColor: screenshotProtectionEnabled ? '#4CAF50' : '#f44336',
+                color: 'white',
+                border: 'none',
+                padding: '5px 10px',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+              onClick={toggleScreenshotProtection}
+              title={screenshotProtectionEnabled ? 'Disable Screenshot Protection' : 'Enable Screenshot Protection'}
+            >
+              {screenshotProtectionEnabled ? '🔒 Protection ON' : '🔓 Protection OFF'}
+            </button>
+          )}
         </div>
 
         <div className="chat-messages">
-          {messages.map((msg) => (
-            <Message key={msg.id} msg={msg} mySocketId={mySocketId} />
-          ))}
+                     {messages.map((msg) => (
+             <Message 
+               key={msg.id} 
+               msg={msg} 
+               mySocketId={mySocketId}
+               onScreenshotDetected={handleScreenshotDetected}
+               protectionEnabled={screenshotProtectionEnabled}
+             />
+           ))}
           <div ref={messagesEndRef} />
         </div>
 
