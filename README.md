@@ -236,6 +236,83 @@ If you encounter any issues or have questions:
 - Check the troubleshooting section
 - Review the console logs for error messages
 
+## ❓ Frequently Asked Questions (FAQ)
+
+### **🔒 Security & Privacy**
+
+**Q: Is my data saved somewhere during transfer?**
+A: **No, data is NOT saved anywhere during transfer.** Messages are encrypted on your device, sent through the server (which acts like a "mailman"), and immediately deleted after delivery. The server cannot read the encrypted messages and has no database to store them.
+
+**Q: What encryption is used for messages and images?**
+A: **Libsodium with ChaCha20-Poly1305 encryption and X25519 key exchange.** This is the same military-grade encryption used by WhatsApp, Signal, and Google Chrome. Messages are encrypted on your device before sending and only decrypted on the receiver's device.
+
+**Q: How do you prevent middleman attacks?**
+A: **End-to-end encryption with direct key exchange.** Users exchange public keys directly (peer-to-peer), generate a shared secret, and encrypt all messages with that secret. The server is "blind" - it can only pass encrypted data but cannot read, modify, or access the actual message content.
+
+**Q: Can the server read my messages?**
+A: **No, absolutely not.** The server only sees encrypted gibberish. It acts like a mailman passing locked boxes - it can deliver them but cannot open them. Only you and the other person have the keys to decrypt the messages.
+
+**Q: What happens if someone intercepts the connection?**
+A: **They would only see encrypted data.** Even if someone intercepts the network traffic, they would only see encrypted gibberish. Without the private keys (which are never sent over the network), the encrypted data is mathematically impossible to decrypt.
+
+### **🚪 Room Management**
+
+**Q: How do rooms work?**
+A: **Self-destructing rooms with maximum 2 users.** When you create a room, you get a unique link to share. When any user leaves, the room is automatically destroyed and all remaining users are redirected to the home page.
+
+**Q: How long do rooms last?**
+A: **Until someone leaves or 10 minutes of inactivity.** Rooms are ephemeral - they exist only while users are active and are automatically cleaned up when users leave or become inactive.
+
+**Q: Can I join a room with more than 2 people?**
+A: **No, maximum 2 users per room.** This is by design for security and privacy. Each room supports exactly 2 users for end-to-end encrypted communication.
+
+### **📸 Image Sharing**
+
+**Q: Are images stored on the server?**
+A: **No, images are never stored.** Images are encrypted, compressed, and transmitted directly between users. They are never saved to any server storage or database.
+
+**Q: How secure is image sharing?**
+A: **Fully encrypted with compression.** Images are encrypted using the same ChaCha20-Poly1305 encryption as messages, automatically compressed for better performance, and transmitted securely between users.
+
+**Q: What image formats are supported?**
+A: **JPG, PNG, GIF with maximum 3MB size.** Images are automatically compressed if they're too large and encrypted before transmission.
+
+### **🔧 Technical**
+
+**Q: What happens if I lose connection?**
+A: **Automatic reconnection with 5-second grace period.** The app will attempt to reconnect automatically. If reconnection fails, you'll be notified and can refresh the page.
+
+**Q: Can I use this on mobile?**
+A: **Yes, fully responsive design.** The app works on all devices - desktop, tablet, and mobile with a responsive interface.
+
+**Q: What browsers are supported?**
+A: **Modern browsers with WebSocket support.** Chrome, Firefox, Safari, Edge, and other modern browsers that support WebSocket connections and the required cryptographic APIs.
+
+**Q: Is this open source?**
+A: **Yes, fully open source.** All code is available on GitHub for review, audit, and contribution. The encryption libraries used are also open source and peer-reviewed.
+
+### **🛡️ Privacy**
+
+**Q: Do you collect any user data?**
+A: **No, zero data collection.** No accounts, no logs, no analytics, no tracking. The app is completely anonymous and doesn't collect any user information.
+
+**Q: Can you see my messages?**
+A: **No, we cannot see any messages.** The developers have no access to message content, user data, or any communication. Everything is encrypted end-to-end.
+
+**Q: What about metadata?**
+A: **Minimal metadata only.** The server only knows when users connect/disconnect and which room they're in. No message content, user identities, or communication patterns are logged.
+
+### **🚀 Usage**
+
+**Q: How do I start a secure chat?**
+A: **Click "Create Chat Room" and share the link.** The app generates a unique room link that you can share with your contact. Both users join the same room to start encrypted communication.
+
+**Q: What if someone gets my room link?**
+A: **Only works if both users are online.** Room links only work when both users are actively in the room. If someone gets your link but you're not online, they cannot access the room.
+
+**Q: Can I verify the other person is who I think they are?**
+A: **No built-in verification.** This is a limitation of anonymous chat. For sensitive communications, consider using additional verification methods outside the app.
+
 ---
 
-**Built with ❤️ for secure communication** 
+**🔒 Built with privacy and security in mind. No data, no accounts, no logs.**
