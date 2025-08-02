@@ -23,8 +23,8 @@ A real-time, end-to-end encrypted chat application with self-destructing rooms a
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/silencium.git
-   cd silencium
+   git clone https://github.com/ubiiii/Silencium.git
+   cd Silencium
    ```
 
 2. **Install dependencies**
@@ -43,8 +43,8 @@ A real-time, end-to-end encrypted chat application with self-destructing rooms a
    # Start the server (from server directory)
    cd server
    node app.js
-
-   # Start the client (from client directory)
+   
+   # Terminal 2: Start the frontend development server
    cd client
    npm run dev
    ```
@@ -191,14 +191,43 @@ NODE_ENV=production node app.js
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the ISC License.
 
-## 🙏 Acknowledgments
+## ⚠️ Disclaimer
 
-- **Libsodium** for cryptographic operations
-- **Socket.io** for real-time communication
-- **React** for the UI framework
-- **Tailwind CSS** for styling
+- Screenshot prevention is limited on web platforms
+- No images are stored - every asset is ephemeral and encrypted
+- This is a demonstration project for secure messaging concepts
+- Use at your own risk for sensitive communications
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Connection Errors**
+- Ensure the server is running on port 3001
+- Check that the client is connecting to the correct server URL
+
+**Encryption Issues**
+- Clear browser cache and reload
+- Ensure both users are in the same room
+- Check browser console for error messages
+
+**Image Upload Issues**
+- Ensure image is under 5MB
+- Check that image format is JPG, PNG, or GIF
+- Try refreshing the page
+
+### ScreenShots
+<img width="399" height="870" alt="Screenshot 2025-08-02 153814" src="https://github.com/user-attachments/assets/6b20a123-7214-4587-8fa7-9c925511f02a" />
+<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/332e045a-bc98-479b-b8d6-721b1939dc2c" />
+<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/332e045a-bc98-479b-b8d6-721b1939dc2c" />
+<img width="406" height="879" alt="Screenshot 2025-08-02 153929" src="https://github.com/user-attachments/assets/f3280e0e-79e6-4373-83fa-b68fcf1e32be" />
+<img width="946" height="950" alt="Screenshot 2025-08-02 154039" src="https://github.com/user-attachments/assets/0b308085-8887-4dca-901a-6f873ceff52a" />
+<img width="952" height="940" alt="Screenshot 2025-08-02 154046" src="https://github.com/user-attachments/assets/b5dd73b4-00c5-4339-9ed0-fb56c5970135" />
+<img width="398" height="854" alt="Screenshot 2025-08-02 154150" src="https://github.com/user-attachments/assets/6887d3ff-98b8-4c00-b435-5dbf964a0029" />
+
+
 
 ## 📞 Support
 
@@ -209,4 +238,4 @@ If you encounter any issues or have questions:
 
 ---
 
-**🔒 Built with privacy and security in mind. No data, no accounts, no logs.** 
+**Built with ❤️ for secure communication** 
