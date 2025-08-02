@@ -4,12 +4,20 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const roomManager = require('./rooms/roomManager');
 
+// Development logging helper
+const isDev = process.env.NODE_ENV !== 'production';
+const devLog = (...args) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
+
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
-  maxHttpBufferSize: 7 * 1024 * 1024  //  ~7 MB to safely support base64 of 5MB
+  maxHttpBufferSize: 3 * 1024 * 1024  // 3 MB to handle compressed images safely
 });
 
 
@@ -19,13 +27,27 @@ app.get('/', (req, res) => res.send('Silencium server running'));
 const roomCountdowns = {}; // roomId => { startTime, timeout }
 
 io.on('connection', (socket) => {
-  console.log('🟢 New client connected:', socket.id);
+  devLog('🟢 New client connected:', socket.id);
 
   // 🏠 JOIN ROOM
   socket.on('join-room', ({ roomId }) => {
     if (!roomId || typeof roomId !== 'string') {
       socket.emit('join-error', 'Invalid room ID');
       return;
+    }
+
+    // Check if user is already in a room
+    if (socket.data.roomId && socket.data.roomId !== roomId) {
+      // Leave previous room first
+      const prevRoomId = socket.data.roomId;
+      const prevRoomUsers = roomManager.getUsers(prevRoomId);
+      const userIndex = prevRoomUsers.indexOf(socket.id);
+      if (userIndex !== -1) {
+        prevRoomUsers.splice(userIndex, 1);
+        if (prevRoomUsers.length === 0) {
+          delete rooms[prevRoomId];
+        }
+      }
     }
 
     const result = roomManager.joinRoom(roomId, socket.id);
@@ -38,8 +60,8 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.data.roomId = roomId;
 
-    console.log(`🧑 ${socket.id} joined room ${roomId}`);
-    console.log(`👥 Users in room ${roomId}:`, result.users);
+    devLog(`🧑 ${socket.id} joined room ${roomId}`);
+    devLog(`👥 Users in room ${roomId}:`, result.users);
 
     const msg = result.users.length === 1
       ? `🟢 ${socket.id} created the room`
@@ -57,7 +79,7 @@ io.on('connection', (socket) => {
   // 🖼️ IMAGE MESSAGE HANDLER (moved outside join-room)
   socket.on('image-message', (data) => {
       const roomId = data.roomId || socket.data.roomId;
-      if (!data.image?.startsWith('data:image/') || Buffer.byteLength(data.image, 'utf-8') > 7 * 1024 * 1024) {
+      if (!data.image?.startsWith('data:image/') || Buffer.byteLength(data.image, 'utf-8') > 3 * 1024 * 1024) {
         console.warn(`❌ Blocked oversized or invalid image from ${socket.id}`);
         return;
       }
@@ -81,6 +103,32 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('receive-image', messagePayload);
     });
 
+  // 🔐 ENCRYPTED IMAGE MESSAGE HANDLER
+  socket.on('send-encrypted-image', (data) => {
+    const roomId = data.roomId || socket.data.roomId;
+    if (!roomId || !data.encrypted || !data.nonce) {
+      console.warn(`❌ Invalid encrypted image data from ${socket.id}`);
+      return;
+    }
+
+    try {
+      devLog(`📤 Processing encrypted image from ${socket.id} in room ${roomId}`);
+      devLog(`📊 Image size: ${data.encrypted.length} bytes`);
+
+      const messagePayload = {
+        encrypted: data.encrypted,
+        nonce: data.nonce,
+        name: data.name,
+        type: data.type,
+      };
+
+      // send encrypted image to other users in the room
+      socket.to(roomId).emit('receive-encrypted-image', messagePayload);
+      devLog(`✅ Encrypted image sent to room ${roomId}`);
+    } catch (error) {
+      console.error(`❌ Error processing encrypted image from ${socket.id}:`, error);
+    }
+  });
 
 
   // 🔐 PUBLIC KEY RELAY
@@ -104,10 +152,10 @@ io.on('connection', (socket) => {
     if (!roomId || roomCountdowns[roomId]) return;
 
     const startTime = Date.now();
-    console.log(`⏱️ Inactivity countdown started in room ${roomId}`);
+    devLog(`⏱️ Inactivity countdown started in room ${roomId}`);
 
     const timeout = setTimeout(() => {
-      console.log(`💥 Room ${roomId} destroyed due to inactivity`);
+      devLog(`💥 Room ${roomId} destroyed due to inactivity`);
       io.to(roomId).emit('roomDestructed', '⚠️ Room destroyed due to user inactivity.');
       io.in(roomId).socketsLeave(roomId);
       delete roomCountdowns[roomId];
@@ -124,38 +172,93 @@ io.on('connection', (socket) => {
 
     clearTimeout(roomCountdowns[roomId].timeout);
     delete roomCountdowns[roomId];
-    console.log(`🔄 Inactivity countdown cancelled in room ${roomId}`);
+    devLog(`🔄 Inactivity countdown cancelled in room ${roomId}`);
     io.to(roomId).emit('cancel-inactivity-countdown');
+  });
+
+  // 🚪 LEAVE ROOM
+  socket.on('leave-room', ({ roomId }) => {
+    devLog(`🚪 ${socket.id} manually left room ${roomId}`);
+    
+    // Remove user from room
+    const actualRoomId = roomId || socket.data.roomId;
+    if (actualRoomId) {
+      const users = roomManager.getUsers(actualRoomId);
+      const userIndex = users.indexOf(socket.id);
+      if (userIndex !== -1) {
+        users.splice(userIndex, 1);
+        
+        if (users.length === 0) {
+          // No users left, delete the room
+          roomManager.deleteRoom(actualRoomId);
+          if (roomCountdowns[actualRoomId]) {
+            clearTimeout(roomCountdowns[actualRoomId].timeout);
+            delete roomCountdowns[actualRoomId];
+          }
+        } else {
+          // Notify remaining users and destroy the room
+          devLog(`💥 Room ${actualRoomId} destroyed because user ${socket.id} left`);
+          io.to(actualRoomId).emit('room-destroyed', {
+            message: 'A user left the room. Room has been destroyed.',
+            leftUserId: socket.id
+          });
+          // Remove all users from the room
+          io.in(actualRoomId).socketsLeave(actualRoomId);
+          // Clear the room
+          roomManager.deleteRoom(actualRoomId);
+          if (roomCountdowns[actualRoomId]) {
+            clearTimeout(roomCountdowns[actualRoomId].timeout);
+            delete roomCountdowns[actualRoomId];
+          }
+        }
+      }
+    }
   });
 
   // ❌ DISCONNECT
   socket.on('disconnect', (reason) => {
-  console.log(`🔴 ${socket.id} disconnected due to: ${reason}`);
+  devLog(`🔴 ${socket.id} disconnected due to: ${reason}`);
 
-  const roomId = roomManager.leaveRoom(socket.id);
-  if (roomId) {
-    const msg = `❌ ${socket.id} left the room`;
-    io.to(roomId).emit('system-message', msg);
+  // Add a grace period for reconnection (5 seconds)
+  setTimeout(() => {
+    const roomId = roomManager.leaveRoom(socket.id);
+    if (roomId) {
+      const msg = `❌ ${socket.id} left the room`;
+      io.to(roomId).emit('system-message', msg);
 
-    const users = roomManager.getUsers(roomId);
-    io.to(roomId).emit('room-update', users);
+      const users = roomManager.getUsers(roomId);
+      io.to(roomId).emit('room-update', users);
 
-    if (users.length === 0) {
-      console.log(`💣 No users left in room ${roomId}`);
-      if (roomCountdowns[roomId]) {
-        clearTimeout(roomCountdowns[roomId].timeout);
-        delete roomCountdowns[roomId];
+      if (users.length === 0) {
+        devLog(`💣 No users left in room ${roomId}`);
+        if (roomCountdowns[roomId]) {
+          clearTimeout(roomCountdowns[roomId].timeout);
+          delete roomCountdowns[roomId];
+        }
+      } else {
+        // Notify remaining users that someone left and destroy the room
+        devLog(`💥 Room ${roomId} destroyed because user ${socket.id} left`);
+        io.to(roomId).emit('room-destroyed', {
+          message: 'A user left the room. Room has been destroyed.',
+          leftUserId: socket.id
+        });
+        // Remove all users from the room
+        io.in(roomId).socketsLeave(roomId);
+        // Clear the room
+        roomManager.deleteRoom(roomId);
+        if (roomCountdowns[roomId]) {
+          clearTimeout(roomCountdowns[roomId].timeout);
+          delete roomCountdowns[roomId];
+        }
       }
-    } else {
-      io.to(roomId).emit('user-left', socket.id);
-    }
 
-    console.log(`🔴 ${socket.id} left room ${roomId}`);
-  }
+      devLog(`🔴 ${socket.id} left room ${roomId}`);
+    }
+  }, 5000); // 5 second grace period
 });
 });
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`🚀 Silencium server running at http://localhost:${PORT}`);
+  devLog(`🚀 Silencium server running at http://localhost:${PORT}`);
 });

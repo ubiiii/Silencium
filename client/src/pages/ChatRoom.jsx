@@ -27,7 +27,9 @@ export default function ChatRoom() {
   const [input, setInput] = useState('');
   const [myPublicKey, setMyPublicKey] = useState(null);
   const [hasSharedKey, setHasSharedKey] = useState(false);
-  const [encryptionStatus, setEncryptionStatus] = useState('initializing');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [encryptionStatus, setEncryptionStatus] = useState('initializing'); // Used for debugging
   const messagesEndRef = useRef(null);
 
   const location = useLocation();
@@ -35,8 +37,13 @@ export default function ChatRoom() {
   const params = new URLSearchParams(location.search);
   const roomId = params.get('room');
   const fileInputRef = useRef(null);
+  const imageHandlersRegistered = useRef(false);
 
       useEffect(() => {
+        // Prevent multiple registrations
+        if (imageHandlersRegistered.current) return;
+        imageHandlersRegistered.current = true;
+
         const handleReceiveImage = (data) => {
           setMessages((prev) => {
             const exists = prev.some(
@@ -47,10 +54,76 @@ export default function ChatRoom() {
           });
         };
 
+        const handleReceiveEncryptedImage = async ({ encrypted, nonce, name, type }) => {
+          if (!hasSharedKeyRef.current || !sharedKeyRef.current || !cryptoWorkerRef.current) return;
+          
+          try {
+            if (import.meta.env.DEV) {
+              console.log('Decrypting image:', { name, type, encryptedLength: encrypted.length });
+            }
+            
+            const decryptedBytes = await cryptoWorkerRef.current.decrypt(
+              new Uint8Array(encrypted),
+              new Uint8Array(nonce),
+              sharedKeyRef.current
+            );
+            
+            if (import.meta.env.DEV) {
+              console.log('Decrypted bytes length:', decryptedBytes.length);
+              console.log('Decrypted bytes type:', typeof decryptedBytes, decryptedBytes.constructor.name);
+              console.log('Decrypted bytes buffer:', decryptedBytes.buffer);
+            }
+            
+            // Handle the decrypted data - it might be a string or binary data
+            let imageData;
+            if (typeof decryptedBytes === 'string') {
+              // If it's already a string, use it directly
+              imageData = decryptedBytes;
+            } else if (decryptedBytes instanceof Uint8Array) {
+              imageData = new TextDecoder().decode(decryptedBytes);
+            } else if (decryptedBytes instanceof ArrayBuffer) {
+              imageData = new TextDecoder().decode(decryptedBytes);
+            } else {
+              // Convert to Uint8Array first
+              const uint8Array = new Uint8Array(decryptedBytes);
+              imageData = new TextDecoder().decode(uint8Array);
+            }
+            
+            if (import.meta.env.DEV) {
+              console.log('Reconstructed image data preview:', imageData.substring(0, 100) + '...');
+            }
+            
+            setMessages((prev) => {
+              // Check for duplicates based on image data hash or timestamp
+              const exists = prev.some(
+                (msg) => msg.image === imageData && msg.sender === "them" && msg.name === name
+              );
+              if (exists) return prev;
+              
+              return [...prev, {
+                id: crypto.randomUUID(),
+                image: imageData,
+                name,
+                type,
+                sender: "them",
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              }];
+            });
+          } catch (err) {
+            console.error('Failed to decrypt image:', err);
+          }
+        };
+
         socket.on('receive-image', handleReceiveImage);
+        socket.on('receive-encrypted-image', handleReceiveEncryptedImage);
 
         return () => {
-          socket.off('receive-image', handleReceiveImage); // ✅ CLEANUP!
+          socket.off('receive-image', handleReceiveImage);
+          socket.off('receive-encrypted-image', handleReceiveEncryptedImage);
+          imageHandlersRegistered.current = false;
         };
       }, []);
 
@@ -59,37 +132,156 @@ export default function ChatRoom() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (!validTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
-      alert('Only JPG/PNG/GIF under 5MB allowed');
+    // Check if encryption is ready
+    if (!hasSharedKeyRef.current || !cryptoWorkerRef.current) {
+      alert('Please wait for encryption to be established before sending images.');
       return;
     }
 
+    // Check if socket is connected
+    if (!socket.connected) {
+      alert('Connection lost. Please refresh the page.');
+      return;
+    }
+
+    // Check if already uploading
+    if (isUploadingImage) {
+      alert('Please wait for the current upload to complete.');
+      return;
+    }
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type) || file.size > 6 * 1024 * 1024) {
+      alert('Only JPG/PNG/GIF under 6MB allowed');
+      return;
+    }
+
+    // More aggressive size limit for stability
+    if (file.size > 3 * 1024 * 1024) { // 3MB limit for stability
+      alert('Image too large. Please use images under 3MB for better stability.');
+      return;
+    }
+
+    setIsUploadingImage(true);
+
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const imageData = reader.result;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          image: imageData,
+      
+      if (import.meta.env.DEV) {
+      console.log('Original image data preview:', imageData.substring(0, 100) + '...');
+    }
+      
+      try {
+        // Always compress images for better stability
+        let processedImageData = await compressImage(imageData, file.type);
+        if (import.meta.env.DEV) {
+          console.log('Image compressed to reduce size');
+        }
+
+        // Use a simpler approach - encrypt the base64 string directly
+        const imageBytes = new TextEncoder().encode(processedImageData);
+        
+        if (import.meta.env.DEV) {
+          console.log('Image bytes length for encryption:', imageBytes.length);
+        }
+
+        // More conservative limit for encrypted data
+        if (imageBytes.length > 2 * 1024 * 1024) { // 2MB limit for encrypted data
+          alert('Image too large after compression. Please use a smaller image.');
+          setIsUploadingImage(false);
+          return;
+        }
+
+        // Add timeout for encryption
+        const encryptionPromise = cryptoWorkerRef.current.encrypt(
+          imageBytes,
+          sharedKeyRef.current
+        );
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Encryption timeout')), 30000)
+        );
+
+        const { ciphertext, nonce } = await Promise.race([encryptionPromise, timeoutPromise]);
+
+        if (import.meta.env.DEV) {
+          console.log('Encrypted data length:', ciphertext.length);
+        }
+
+        // Send encrypted image
+        socket.emit('send-encrypted-image', {
+          roomId,
+          encrypted: Array.from(ciphertext),
+          nonce: Array.from(nonce),
           name: file.name,
           type: file.type,
-          sender: socket.id,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
+        });
+
+        // Add a longer delay to prevent overwhelming the socket
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Add to local messages
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            image: processedImageData,
+            name: file.name,
+            type: file.type,
+            sender: socket.id,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
             })
-        }
-      ]);
-      socket.emit('image-message', {
-        roomId,
-        image: imageData,
-        name: file.name,
-        type: file.type,
-      });
+          }
+        ]);
+      } catch (err) {
+        console.error('Failed to encrypt image:', err);
+        alert('Failed to encrypt image. Please try again.');
+      } finally {
+        setIsUploadingImage(false);
+      }
     };
     reader.readAsDataURL(file);
+  };
+
+  // Improved image compression function
+  const compressImage = (imageData, type) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // More aggressive size reduction (max 1280x720)
+        let { width, height } = img;
+        const maxWidth = 1280;
+        const maxHeight = 720;
+        
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width *= ratio;
+          height *= ratio;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // More aggressive compression
+        const quality = type === 'image/jpeg' ? 0.6 : 0.7;
+        const compressedData = canvas.toDataURL(type, quality);
+        
+        if (import.meta.env.DEV) {
+          console.log(`Compressed image from ${img.width}x${img.height} to ${width}x${height}`);
+        }
+        resolve(compressedData);
+      };
+      img.src = imageData;
+    });
   };
 
   useAutoScroll(messagesEndRef, messages);
@@ -104,6 +296,13 @@ export default function ChatRoom() {
       cryptoWorkerRef.current?.terminate();
     };
   }, []);
+
+  // Reset image handlers when room changes
+  useEffect(() => {
+    return () => {
+      imageHandlersRegistered.current = false;
+    };
+  }, [roomId]);
 
   useEffect(() => {
     const handleConnect = () => {
@@ -129,8 +328,54 @@ export default function ChatRoom() {
       }, 1500);
     };
 
+    const handleDisconnect = (reason) => {
+      if (import.meta.env.DEV) {
+        console.log('Socket disconnected:', reason);
+      }
+      if (reason === 'io server disconnect') {
+        // Server disconnected us, try to reconnect
+        if (import.meta.env.DEV) {
+          console.log('Attempting to reconnect...');
+        }
+        socket.connect();
+      } else if (reason === 'transport close' || reason === 'ping timeout') {
+        // Network issues, try to reconnect
+        if (import.meta.env.DEV) {
+          console.log('Network issue detected, attempting to reconnect...');
+        }
+        setTimeout(() => {
+          if (!socket.connected) {
+            socket.connect();
+          }
+        }, 1000);
+      }
+    };
+
+    const handleError = (error) => {
+      console.error('Socket error:', error);
+    };
+
+    const handleReconnect = (attemptNumber) => {
+      if (import.meta.env.DEV) {
+        console.log('Socket reconnected on attempt:', attemptNumber);
+      }
+      // Re-join the room after reconnection
+      if (roomId) {
+        socket.emit("join-room", { roomId });
+      }
+    };
+
     socket.on("connect", handleConnect);
-    return () => socket.off("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("error", handleError);
+    socket.on("reconnect", handleReconnect);
+    
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("error", handleError);
+      socket.off("reconnect", handleReconnect);
+    };
   }, [myPublicKey, roomId]);
 
   const sendMessage = async () => {
@@ -204,6 +449,30 @@ export default function ChatRoom() {
         navigate("/");
       });
 
+      socket.on("room-destroyed", ({ message, leftUserId }) => {
+        clearInterval(countdownInterval);
+        setTimeLeft(0);
+        setMessages(prev => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            text: `⚠️ ${message}`,
+            sender: "system",
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          }
+        ]);
+        
+        // Show notification and redirect after a short delay
+        setTimeout(() => {
+          alert(message);
+          socket.disconnect();
+          navigate("/");
+        }, 1000);
+      });
+
       socket.on("start-inactivity-countdown", ({ startTime }) => {
         clearInterval(countdownInterval);
         timerStartRef.current = startTime;
@@ -261,10 +530,6 @@ export default function ChatRoom() {
           new Uint8Array(nonce),
           sharedKeyRef.current
         );
-        const time = new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
         setMessages((prev) => [
           ...prev,
           {
@@ -281,10 +546,6 @@ export default function ChatRoom() {
       });
 
       socket.on("system-message", (msg) => {
-        const time = new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
         setMessages((prev) => {
           const alreadyExists = prev.some(
             (m) => m.text === msg && m.sender === "system"
@@ -333,6 +594,7 @@ export default function ChatRoom() {
       socket.off("join-error");
       socket.off("user-left");
       socket.off("roomDestructed");
+      socket.off("room-destroyed");
       socket.off("start-inactivity-countdown");
       socket.off("cancel-inactivity-countdown");
 
@@ -343,6 +605,8 @@ export default function ChatRoom() {
 
   const handleLeaveRoom = () => {
     setMessages([]);
+    // Emit a leave event before disconnecting
+    socket.emit('leave-room', { roomId });
     socket.disconnect();
     navigate('/');
   };
@@ -367,6 +631,19 @@ export default function ChatRoom() {
           </button>
         </div>
 
+        <div className="encryption-status" style={{ 
+          fontFamily: "'Orbitron'", 
+          textAlign: 'center', 
+          padding: '8px',
+          margin: '8px 0',
+          borderRadius: '4px',
+          backgroundColor: hasSharedKey ? '#1a4d1a' : '#4d1a1a',
+          color: '#00ff00',
+          fontSize: '12px'
+        }}>
+          {hasSharedKey ? '🔒 Encryption Active' : '⏳ Establishing Encryption...'}
+        </div>
+
         <div className="chat-messages">
           {messages.map((msg) => (
             <div
@@ -381,7 +658,7 @@ export default function ChatRoom() {
             >
               <div className={`message-bubble ${msg.sender === 'system' ? 'system-msg' : 'user-msg'}`}>
                 {msg.type?.startsWith('image') ? (
-                        <CanvasImageRenderer imageData={msg.image} />
+                        <CanvasImageRenderer imageData={msg.image} imageName={msg.name} />
                       ) : (
                         <div>{msg.text ?? '[no text]'}</div>
                       )}
@@ -424,8 +701,12 @@ export default function ChatRoom() {
             placeholder="> Type a message..."
             disabled={!hasSharedKey}
           />
-          <button onClick={() => fileInputRef.current.click()}>
-            📎
+          <button 
+            onClick={() => fileInputRef.current.click()} 
+            disabled={!hasSharedKey || isUploadingImage}
+            title={!hasSharedKey ? "Wait for encryption to be established" : isUploadingImage ? "Uploading image..." : "Attach image"}
+          >
+            {isUploadingImage ? '⏳' : '📎'}
           </button>
           <button onClick={sendMessage} disabled={!hasSharedKey}>
             Send

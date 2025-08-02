@@ -1,8 +1,6 @@
 import sodium from 'libsodium-wrappers';
 
-let sodiumReady = false;
 await sodium.ready;
-sodiumReady = true;
 
 self.onmessage = async (e) => {
   const { id, type, data } = e.data;

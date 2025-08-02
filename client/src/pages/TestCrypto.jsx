@@ -8,9 +8,12 @@ import {
 } from '../crypto/sodium';
 
 export default function TestCrypto() {
-  const [myKeys, setMyKeys] = useState(null);
-  const [theirKeys, setTheirKeys] = useState(null);
-  const [sharedKey, setSharedKey] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [myKeys, setMyKeys] = useState(null); // Used in crypto test
+  // eslint-disable-next-line no-unused-vars
+  const [theirKeys, setTheirKeys] = useState(null); // Used in crypto test
+  // eslint-disable-next-line no-unused-vars
+  const [sharedKey, setSharedKey] = useState(null); // Used in crypto test
   const [encrypted, setEncrypted] = useState(null);
   const [decrypted, setDecrypted] = useState(null);
 

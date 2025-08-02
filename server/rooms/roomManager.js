@@ -28,8 +28,17 @@ function getUsers(roomId) {
   return rooms[roomId] || [];
 }
 
+function deleteRoom(roomId) {
+  if (rooms[roomId]) {
+    delete rooms[roomId];
+    return true;
+  }
+  return false;
+}
+
 module.exports = {
   joinRoom,
   leaveRoom,
-  getUsers  // ✅ export it here
+  getUsers,  // ✅ export it here
+  deleteRoom
 };

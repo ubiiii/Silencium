@@ -1,58 +1,38 @@
-# 🔐 Silencium
+# 🔒 Silencium - Secure Private Chat
 
-**Secure, ephemeral, end-to-end encrypted messaging with a hacker aesthetic.**
-
-Silencium is a real-time messaging application that prioritizes security and privacy. Built with modern web technologies, it provides end-to-end encryption, ephemeral messaging, and a distinctive terminal-style interface.
-
-![Silencium Demo](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
-![License](https://img.shields.io/badge/License-ISC-blue)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![React](https://img.shields.io/badge/React-19.1.0-blue)
+A real-time, end-to-end encrypted chat application with self-destructing rooms and secure image sharing. Built with privacy and security as the top priority.
 
 ## ✨ Features
 
-### 🔒 Security & Privacy
-- **End-to-End Encryption**: Messages are encrypted using libsodium.js with X25519 key exchange
-- **Ephemeral Messaging**: No messages are stored on the server
-- **Auto-Destruct**: Rooms automatically destroy after 10 minutes of inactivity
-- **Canvas Image Rendering**: Images are rendered on canvas to prevent easy downloads
-- **Web Worker Crypto**: Encryption operations run in background threads
-
-### 💬 Messaging
-- **Real-time Communication**: Instant messaging via Socket.IO
-- **Image Sharing**: Secure image sharing with size and type validation
-- **System Messages**: Automatic notifications for room events
-- **Room Management**: Create and join rooms with unique IDs
-
-### 🎨 User Experience
-- **Hacker Aesthetic**: Dark terminal-style interface with green text
-- **Mobile Responsive**: Works seamlessly on mobile devices
-- **Auto-scroll**: Messages automatically scroll to bottom
-- **Copy Link**: Easy room sharing functionality
+- **🔐 End-to-End Encryption** - All messages and images are encrypted using Libsodium
+- **🚪 Self-Destructing Rooms** - Rooms are automatically destroyed when any user leaves
+- **📸 Secure Image Sharing** - Encrypted image transmission with compression
+- **👥 No Accounts Required** - Anonymous chat without registration
+- **🗑️ No Data Storage** - Messages are never stored on the server
+- **🔍 Screenshot Detection** - Built-in screenshot detection capabilities
+- **⚡ Real-time Communication** - Instant message delivery via WebSocket
+- **🎨 Modern UI** - Clean, terminal-inspired interface
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js (v16 or higher)
 - npm or yarn
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd Silencium
+   git clone https://github.com/yourusername/silencium.git
+   cd silencium
    ```
 
 2. **Install dependencies**
    ```bash
-   # Install root dependencies
-   npm install
-   
    # Install client dependencies
    cd client
    npm install
-   
+
    # Install server dependencies
    cd ../server
    npm install
@@ -60,156 +40,146 @@ Silencium is a real-time messaging application that prioritizes security and pri
 
 3. **Start the development servers**
    ```bash
-   # Terminal 1: Start the backend server
+   # Start the server (from server directory)
    cd server
-   npm start
-   
-   # Terminal 2: Start the frontend development server
+   node app.js
+
+   # Start the client (from client directory)
    cd client
    npm run dev
    ```
 
 4. **Open your browser**
-   Navigate to `http://localhost:5173` to access the application.
+   - Navigate to `http://localhost:5173`
+   - Create a new chat room or join an existing one
 
 ## 🏗️ Project Structure
 
 ```
 Silencium/
-├── client/                 # React frontend application
+├── client/                 # React frontend
 │   ├── src/
-│   │   ├── pages/         # Application pages
-│   │   │   ├── CreateRoom.jsx
-│   │   │   ├── JoinRoom.jsx
-│   │   │   └── ChatRoom.jsx
-│   │   ├── components/    # React components
-│   │   │   └── CanvasImageRenderer.jsx
+│   │   ├── components/     # React components
+│   │   ├── pages/         # Page components
 │   │   ├── crypto/        # Encryption utilities
-│   │   │   ├── libs.js
-│   │   │   ├── workerWrapper.js
-│   │   │   └── crypto.worker.js
-│   │   ├── utils/         # Utility functions
-│   │   │   ├── socket.js
-│   │   │   ├── constants.js
-│   │   │   └── animations.js
-│   │   └── src/
-│   │       ├── styles/    # CSS styles
-│   │       │   └── hacker-theme.css
-│   │       └── hooks/     # Custom React hooks
-│   │           └── useAutoScroll.js
-│   ├── public/            # Static assets
-│   └── package.json       # Frontend dependencies
-├── server/                # Node.js backend server
+│   │   └── utils/         # Utility functions
+├── server/                 # Node.js backend
 │   ├── app.js            # Main server file
-│   ├── rooms/            # Room management
-│   │   └── roomManager.js
-│   └── package.json      # Backend dependencies
-├── FEATURES.md           # Feature roadmap
-└── README.md            # This file
+│   └── rooms/            # Room management
+└── README.md
 ```
 
-## 🔧 Configuration
+## 🔧 Technology Stack
 
-### Environment Variables
+### Frontend
+- **React** - UI framework
+- **Socket.io Client** - Real-time communication
+- **Libsodium** - End-to-end encryption
+- **Tailwind CSS** - Styling
+- **Vite** - Build tool
 
-The application uses default configurations, but you can customize:
-
-- **Server Port**: Set `PORT` environment variable (default: 3001)
-- **Client URL**: Configure in `client/src/utils/socket.js`
-
-### Development Scripts
-
-**Client (Frontend)**
-```bash
-cd client
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run lint     # Run ESLint
-```
-
-**Server (Backend)**
-```bash
-cd server
-npm start        # Start the server
-```
+### Backend
+- **Node.js** - Runtime environment
+- **Express** - Web framework
+- **Socket.io** - Real-time communication
+- **CORS** - Cross-origin resource sharing
 
 ## 🔐 Security Features
 
-### Encryption Implementation
-- **Key Exchange**: X25519 key exchange protocol
-- **Message Encryption**: ChaCha20-Poly1305 for message encryption
-- **Web Workers**: Crypto operations run in background threads
-- **No Server Storage**: Messages are never stored on the server
+### Encryption
+- **Libsodium** for cryptographic operations
+- **X25519** key exchange
+- **ChaCha20-Poly1305** for authenticated encryption
+- **Secure random number generation**
+
+### Privacy
+- **No user accounts** - Completely anonymous
+- **No message storage** - Messages are never saved
+- **Self-destructing rooms** - Automatic cleanup
+- **End-to-end encryption** - Only participants can read messages
 
 ### Image Security
-- **Canvas Rendering**: Images rendered on HTML5 canvas
-- **Right-click Prevention**: Disabled context menu on images
-- **Size Validation**: 5MB maximum file size
-- **Type Validation**: Only JPG, PNG, GIF allowed
+- **Encrypted image transmission**
+- **Automatic compression** for better performance
+- **Secure file handling**
 
-### Room Security
-- **Ephemeral Rooms**: Rooms auto-destroy after inactivity
-- **User Limits**: Maximum 2 users per room
-- **Unique IDs**: Random room ID generation
-- **Connection Validation**: Socket connection validation
+## 📸 Screenshots
 
-## 🎯 Usage
+### Home Page
+![Home Page](screenshots/home-page.png)
+*Landing page with security features and create room button*
+
+### Chat Room
+![Chat Room](screenshots/chat-room.png)
+*Active chat room with encrypted messaging*
+
+### Image Sharing
+![Image Sharing](screenshots/image-sharing.png)
+*Secure image sharing with encryption*
+
+### Full Screen Image Viewer
+![Image Viewer](screenshots/image-viewer.png)
+*Full screen image viewer with zoom and pan*
+
+## 🚪 Room Management
 
 ### Creating a Room
-1. Visit the application homepage
-2. Click "Create Chat Room"
-3. Share the generated link with your contact
+1. Click "Create Chat Room" on the home page
+2. Share the generated room link with your contact
+3. Start chatting securely
 
 ### Joining a Room
-1. Click the shared link or enter the room ID
-2. Wait for the other user to join
-3. Encryption will automatically activate
+1. Use the shared room link
+2. Or manually enter the room ID
+3. Connect instantly with end-to-end encryption
 
-### Sending Messages
-- Type your message and press Enter
-- Images can be attached using the paperclip button
-- All messages are end-to-end encrypted
+### Room Destruction
+- Rooms are automatically destroyed when any user leaves
+- All participants are notified and redirected to home
+- No orphaned rooms or stuck users
 
-### Security Notes
-- Rooms automatically destroy after 10 minutes of inactivity
-- Images are rendered securely and cannot be easily downloaded
-- No messages are stored on the server
-- Each room supports maximum 2 users
+## 🔧 Development
 
-## 🛠️ Technical Stack
+### Running in Development Mode
+```bash
+# Client (with hot reload)
+cd client
+npm run dev
 
-### Frontend
-- **React 19.1.0**: Modern React with hooks
-- **Vite**: Fast build tool and dev server
-- **Socket.IO Client**: Real-time communication
-- **Tailwind CSS**: Utility-first CSS framework
-- **libsodium-wrappers**: Cryptography library
+# Server
+cd server
+node app.js
+```
 
-### Backend
-- **Node.js**: JavaScript runtime
-- **Express**: Web framework
-- **Socket.IO**: Real-time bidirectional communication
-- **CORS**: Cross-origin resource sharing
+### Building for Production
+```bash
+# Build client
+cd client
+npm run build
 
-### Security
-- **libsodium.js**: Modern cryptography library
-- **Web Workers**: Background thread execution
-- **Canvas API**: Secure image rendering
+# Start production server
+cd server
+NODE_ENV=production node app.js
+```
 
-## 🔮 Roadmap
+## 🐛 Troubleshooting
 
-### Planned Features
-- [ ] Auto self-destruct after 5 mins inactivity
-- [ ] One-view image sharing (no download/screenshot)
-- [ ] Defensive hardening against known attacks
-- [ ] Partial screenshot prevention measures
+### Common Issues
 
-### Security Enhancements
-- [ ] XSS protection
-- [ ] Replay attack defense
-- [ ] Key fingerprint comparison
-- [ ] Rate limiting and flood control
+**Connection Failed**
+- Ensure the server is running on port 3001
+- Check firewall settings
+- Verify network connectivity
+
+**Encryption Issues**
+- Clear browser cache and reload
+- Check browser console for errors
+- Ensure WebSocket connections are allowed
+
+**Image Upload Problems**
+- Check file size (max 3MB)
+- Ensure image format is supported
+- Clear browser cache if needed
 
 ## 🤝 Contributing
 
@@ -219,39 +189,24 @@ npm start        # Start the server
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## 📝 License
 
-This project is licensed under the ISC License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## ⚠️ Disclaimer
+## 🙏 Acknowledgments
 
-- Screenshot prevention is limited on web platforms
-- No images are stored - every asset is ephemeral and encrypted
-- This is a demonstration project for secure messaging concepts
-- Use at your own risk for sensitive communications
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Connection Errors**
-- Ensure the server is running on port 3001
-- Check that the client is connecting to the correct server URL
-
-**Encryption Issues**
-- Clear browser cache and reload
-- Ensure both users are in the same room
-- Check browser console for error messages
-
-**Image Upload Issues**
-- Ensure image is under 5MB
-- Check that image format is JPG, PNG, or GIF
-- Try refreshing the page
+- **Libsodium** for cryptographic operations
+- **Socket.io** for real-time communication
+- **React** for the UI framework
+- **Tailwind CSS** for styling
 
 ## 📞 Support
 
-For issues, questions, or contributions, please open an issue on the repository.
+If you encounter any issues or have questions:
+- Open an issue on GitHub
+- Check the troubleshooting section
+- Review the console logs for error messages
 
 ---
 
-**Built with ❤️ for secure communication** 
+**🔒 Built with privacy and security in mind. No data, no accounts, no logs.** 

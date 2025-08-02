@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const URL = process.env.NODE_ENV === 'production' 
+const URL = import.meta.env.MODE === 'production' 
   ? window.location.origin 
   : 'http://localhost:3001';
 
@@ -13,15 +13,17 @@ export const socket = io(URL, {
   reconnectionDelay: 1000,
 });
 
-// Connection status logging
-socket.on('connect', () => {
-  console.log('🟢 Connected to server with ID:', socket.id);
-});
+// Connection status logging (only in development)
+if (import.meta.env.DEV) {
+  socket.on('connect', () => {
+    console.log('🟢 Connected to server with ID:', socket.id);
+  });
 
-socket.on('disconnect', () => {
-  console.log('🔴 Disconnected from server');
-});
+  socket.on('disconnect', () => {
+    console.log('🔴 Disconnected from server');
+  });
 
-socket.on('connect_error', (err) => {
-  console.error('Connection error:', err.message);
-});
+  socket.on('connect_error', (err) => {
+    console.error('Connection error:', err.message);
+  });
+}

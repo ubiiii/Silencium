@@ -16,12 +16,12 @@ export function generateKeyPair() {
 
 // Derive a shared key using ECDH
 export function deriveSharedKey(myKeys, theirPublicKey, isServer = true) {
-  const result = isServer
+  const keys = isServer
     ? sodium.crypto_kx_server_session_keys(myKeys.publicKey, myKeys.privateKey, theirPublicKey)
     : sodium.crypto_kx_client_session_keys(myKeys.publicKey, myKeys.privateKey, theirPublicKey);
 
   // Use the `sharedRx` (receive) key as the shared symmetric key
-  return result.sharedRx;
+  return keys.sharedRx;
 }
 
 // Encrypt a message using AES-GCM with the shared key
