@@ -40,7 +40,7 @@ Silencium is a real-time messaging application that prioritizes security and pri
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ubiiii/Silencium.git
    cd Silencium
    ```
 
@@ -62,7 +62,7 @@ Silencium is a real-time messaging application that prioritizes security and pri
    ```bash
    # Terminal 1: Start the backend server
    cd server
-   npm start
+   node app.js
    
    # Terminal 2: Start the frontend development server
    cd client
@@ -247,6 +247,17 @@ This project is licensed under the ISC License.
 - Ensure image is under 5MB
 - Check that image format is JPG, PNG, or GIF
 - Try refreshing the page
+
+### ScreenShots
+<img width="399" height="870" alt="Screenshot 2025-08-02 153814" src="https://github.com/user-attachments/assets/6b20a123-7214-4587-8fa7-9c925511f02a" />
+<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/332e045a-bc98-479b-b8d6-721b1939dc2c" />
+<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/332e045a-bc98-479b-b8d6-721b1939dc2c" />
+<img width="406" height="879" alt="Screenshot 2025-08-02 153929" src="https://github.com/user-attachments/assets/f3280e0e-79e6-4373-83fa-b68fcf1e32be" />
+<img width="946" height="950" alt="Screenshot 2025-08-02 154039" src="https://github.com/user-attachments/assets/0b308085-8887-4dca-901a-6f873ceff52a" />
+<img width="952" height="940" alt="Screenshot 2025-08-02 154046" src="https://github.com/user-attachments/assets/b5dd73b4-00c5-4339-9ed0-fb56c5970135" />
+<img width="398" height="854" alt="Screenshot 2025-08-02 154150" src="https://github.com/user-attachments/assets/6887d3ff-98b8-4c00-b435-5dbf964a0029" />
+
+
 
 ## 📞 Support
 
