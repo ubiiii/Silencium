@@ -219,13 +219,14 @@ This project is licensed under the ISC License.
 - Try refreshing the page
 
 ### ScreenShots
-<img width="399" height="870" alt="Screenshot 2025-08-02 153814" src="https://github.com/user-attachments/assets/6b20a123-7214-4587-8fa7-9c925511f02a" />
-<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/332e045a-bc98-479b-b8d6-721b1939dc2c" />
-<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/332e045a-bc98-479b-b8d6-721b1939dc2c" />
-<img width="406" height="879" alt="Screenshot 2025-08-02 153929" src="https://github.com/user-attachments/assets/f3280e0e-79e6-4373-83fa-b68fcf1e32be" />
-<img width="946" height="950" alt="Screenshot 2025-08-02 154039" src="https://github.com/user-attachments/assets/0b308085-8887-4dca-901a-6f873ceff52a" />
-<img width="952" height="940" alt="Screenshot 2025-08-02 154046" src="https://github.com/user-attachments/assets/b5dd73b4-00c5-4339-9ed0-fb56c5970135" />
-<img width="398" height="854" alt="Screenshot 2025-08-02 154150" src="https://github.com/user-attachments/assets/6887d3ff-98b8-4c00-b435-5dbf964a0029" />
+<img width="399" height="870" alt="Screenshot 2025-08-02 153814" src="https://github.com/user-attachments/assets/a658606a-c31a-4af4-b4c3-ab31f0635882" />
+<img width="401" height="868" alt="Screenshot 2025-08-02 153836" src="https://github.com/user-attachments/assets/915d1360-d188-4f90-97b4-c99dc7bdbbe7" />
+<img width="1919" height="962" alt="Screenshot 2025-08-02 153850" src="https://github.com/user-attachments/assets/02418d03-e680-42d8-ace5-2add3533f5f0" />
+<img width="1919" height="962" alt="Screenshot 2025-08-02 153850" src="https://github.com/user-attachments/assets/02418d03-e680-42d8-ace5-2add3533f5f0" />
+
+<img width="946" height="950" alt="Screenshot 2025-08-02 154039" src="https://github.com/user-attachments/assets/7d0a9fb6-a712-4421-9625-da7687a3a808" />
+<img width="952" height="940" alt="Screenshot 2025-08-02 154046" src="https://github.com/user-attachments/assets/f084c3aa-01d4-44ac-a514-1cadb28c6f8b" />
+<img width="398" height="854" alt="Screenshot 2025-08-02 154150" src="https://github.com/user-attachments/assets/1064f23a-b6a6-455f-af3f-1714a0aec381" />
 
 
 
